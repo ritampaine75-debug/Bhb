@@ -1,0 +1,36 @@
+name: Gmail Verification System
+on:
+  repository_dispatch:
+    types: [send-otp]
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Generate 6-Digit OTP
+        run: |
+          OTP=$(shuf -i 100000-999999 -n 1)
+          echo "OTP=$OTP" >> $GITHUB_ENV
+          echo "{\"email\": \"${{ github.event.client_payload.email }}\", \"otp\": \"$OTP\"}" > otp_data.json
+
+      - name: Send Email via Gmail
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASS }}
+          subject: "Your Website Verification Code"
+          to: ${{ github.event.client_payload.email }}
+          body: "Hello! Your verification code is: ${{ env.OTP }}. It will expire soon."
+
+      - name: Update OTP Database
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add otp_data.json
+          git commit -m "Update OTP for ${{ github.event.client_payload.email }}"
+          git push
