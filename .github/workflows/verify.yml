@@ -1,7 +1,12 @@
 name: Gmail Verification System
+
 on:
   repository_dispatch:
     types: [send-otp]
+
+# This gives the Action permission to write the otp_data.json file to your repo
+permissions:
+  contents: write
 
 jobs:
   send-email:
@@ -24,13 +29,15 @@ jobs:
           username: ${{ secrets.GMAIL_USER }}
           password: ${{ secrets.GMAIL_PASS }}
           subject: "Your Website Verification Code"
+          # ADDED THE MISSING "FROM" FIELD BELOW
+          from: "Verification Service <${{ secrets.GMAIL_USER }}>"
           to: ${{ github.event.client_payload.email }}
-          body: "Hello! Your verification code is: ${{ env.OTP }}. It will expire soon."
+          body: "Hello! Your verification code is: ${{ env.OTP }}. Use this to verify your account."
 
       - name: Update OTP Database
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add otp_data.json
           git commit -m "Update OTP for ${{ github.event.client_payload.email }}"
           git push
